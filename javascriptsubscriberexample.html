@@ -1,0 +1,143 @@
+<html>
+<style>
+    canvas {
+      padding-left: auto;
+      padding-right: auto;
+      margin-left: auto;
+      margin-right: auto;
+      display: block;
+      max-height: 400px;
+      max-width: 800px;
+    }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.min.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
+
+<h2>Sensor Information</h2>
+<div>
+        <canvas id="myChart"></canvas>
+	<canvas id="potChart"></canvas>
+</div>
+<script>
+
+    var myData = [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5];
+
+    var ctx = document.getElementById('myChart');
+    var myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            datasets: [{
+                label: 'Temperature',
+                data: myData,
+                backgroundColor: [
+                    'rgba(255, 255, 255, 0.2)',
+                ],
+                borderColor: [
+                    'rgba(150, 80, 145, 1)',
+                ],
+                borderWidth: 5
+            }]
+        },
+        options: {
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        max: 100,
+                        min: 50
+                    }
+                }]
+            }
+        }
+    });
+
+    var potData = [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5];
+
+    var ctx = document.getElementById('potChart');
+    var potChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            datasets: [{
+                label: 'Potentiometer',
+                data: potData,
+                backgroundColor: [
+                    'rgba(255, 255, 255, 0.2)',
+                ],
+                borderColor: [
+                    'rgba(115, 0, 10, 1)',
+                ],
+                borderWidth: 5
+            }]
+        },
+        options: {
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        max: 1.0,
+                        min: 0.0
+                    }
+                }]
+            }
+        }
+    });
+
+    var updateTemp = function(temp){
+        myData.push(parseFloat(temp));
+        myChart.data.datasets[0].data.shift();
+        myChart.update();
+    }
+    var updatePotentiometer = function(value){
+        potData.push(parseFloat(value));
+        potChart.data.datasets[0].data.shift();
+        potChart.update();
+    }
+
+    // Create a client instance
+client = new Paho.MQTT.Client("broker.hivemq.com", 8000, "clientId29999");
+
+// set callback handlers
+client.onConnectionLost = onConnectionLost;
+client.onMessageArrived = onMessageArrived;
+
+// connect the client
+client.connect({onSuccess:onConnect});
+
+
+// called hen the client connects
+function onConnect() {
+  // Once a connection has been made, make a subscription and send a message.
+  console.log("onConnect");
+  client.subscribe("nextlab_temperature");
+  client.subscribe("nextlab_potentiometer");
+}
+
+// called when the client loses its connection
+function onConnectionLost(responseObject) {
+  if (responseObject.errorCode !== 0) {
+    console.log("onConnectionLost:"+responseObject.errorMessage);
+  }
+}
+
+// called when a message arrives
+function onMessageArrived(message) {
+  console.log("onMessageArrived:"+message.payloadString);
+  var messagejson = JSON.parse(message.payloadString);
+
+  switch(Object.keys(messagejson)[0]){
+      case "temperature":
+          updateTemp(messagejson["temperature"]);
+          break;
+      case "potentiometer":
+          updatePotentiometer(messagejson["potentiometer"]);
+          break;
+  }
+
+  //updateChart(message);
+}
+
+</script>
+</html>
